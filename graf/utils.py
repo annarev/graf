@@ -14,6 +14,22 @@ def get_nsamples(data_loader, N):
   x = torch.cat(x, dim=0)[:N]
   return x
 
+def get_nsamples_with_sketch(data_loader, N):
+  """Returns samples from shapenet_sketch dataset."""
+  x = []
+  sketch = []
+  patch_sketch = []
+  n = 0
+  while n < N:
+      x_next, sketch_next, patch_sketch_next = next(iter(data_loader))
+      x.append(x_next)
+      sketch.append(sketch_next)
+      patch_sketch.append(patch_sketch_next)
+      n += x_next.size(0)
+  x = torch.cat(x, dim=0)[:N]
+  sketch = torch.cat(sketch, dim=0)[:N]
+  small_sketch = torch.cat(patch_sketch, dim=0)[:N]
+  return x, sketch, small_sketch
 
 def count_trainable_parameters(model):
   model_parameters = filter(lambda p: p.requires_grad, model.parameters())

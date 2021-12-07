@@ -5,6 +5,8 @@ from torchvision.transforms import *
 from .datasets import *
 from .transforms import FlexGridRaySampler
 from .utils import polar_to_cartesian, look_at, to_phi, to_theta
+from .models import generator_sketch
+from .models import discriminator_sketch
 
 
 def save_config(outpath, config):
@@ -78,7 +80,11 @@ def get_data(config):
     elif dset_type == 'cub':
         dset = CUB(**kwargs)
 
+    elif dset_type == 'shapenet_sketch':
+      dset = SketchDataset(**kwargs)
+
     dset.H = dset.W = imsize
+
     dset.focal = W/2 * 1 / np.tan((.5 * fov * np.pi/180.))
     radius = config['data']['radius']
     render_radius = radius
@@ -139,15 +145,26 @@ def build_models(config, disc=True):
                                      orthographic=config['data']['orthographic'])
 
     H, W, f, r = config['data']['hwfr']
-    generator = Generator(H, W, f, r,
-                          ray_sampler=ray_sampler,
-                          render_kwargs_train=render_kwargs_train, render_kwargs_test=render_kwargs_test,
-                          parameters=params, named_parameters=named_parameters,
-                          chunk=config_nerf.chunk,
-                          range_u=(float(config['data']['umin']), float(config['data']['umax'])),
-                          range_v=(float(config['data']['vmin']), float(config['data']['vmax'])),
-                          orthographic=config['data']['orthographic'],
-                          )
+    condition_on_sketch = config['data']['type'] == 'shapenet_sketch'
+    
+    if condition_on_sketch:
+        generator = generator_sketch.Generator(H, W, config_nerf.feat_dim, f, r,
+            ray_sampler=ray_sampler,
+            render_kwargs_train=render_kwargs_train, render_kwargs_test=render_kwargs_test,
+            parameters=params, named_parameters=named_parameters,
+            chunk=config_nerf.chunk,
+            range_u=(float(config['data']['umin']), float(config['data']['umax'])),
+            range_v=(float(config['data']['vmin']), float(config['data']['vmax'])),
+            orthographic=config['data']['orthographic'])
+    else:
+        generator = Generator(H, W, f, r,
+            ray_sampler=ray_sampler,
+            render_kwargs_train=render_kwargs_train, render_kwargs_test=render_kwargs_test,
+            parameters=params, named_parameters=named_parameters,
+            chunk=config_nerf.chunk,
+            range_u=(float(config['data']['umin']), float(config['data']['umax'])),
+            range_v=(float(config['data']['vmin']), float(config['data']['vmax'])),
+            orthographic=config['data']['orthographic'])
 
     discriminator = None
     if disc:
@@ -156,7 +173,10 @@ def build_models(config, disc=True):
                        'imsize': int(np.sqrt(config['ray_sampler']['N_samples'])),
                        'hflip': config['discriminator']['hflip']}
 
-        discriminator = Discriminator(**disc_kwargs)
+        if use_sketch:
+            discriminator = discriminator_sketch.Discriminator(**disc_kwargs)
+        else:
+            discriminator = Discriminator(**disc_kwargs)
 
     return generator, discriminator
 

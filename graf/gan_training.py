@@ -7,7 +7,7 @@ from submodules.GAN_stability.gan_training.train import toggle_grad, Trainer as 
 from submodules.GAN_stability.gan_training.eval import Evaluator as EvaluatorBase
 from submodules.GAN_stability.gan_training.metrics import FIDEvaluator, KIDEvaluator
 
-from .utils import save_video, color_depth_map
+from .utils import save_video, color_depth_map, get_nsamples_with_sketch
 
 
 class Trainer(TrainerBase):
@@ -141,6 +141,24 @@ class Evaluator(EvaluatorBase):
                 while True:
                     z = self.zdist.sample((self.batch_size,))
                     rgb, _, _ = self.create_samples(z)
+                    # convert to uint8 and back to get correct binning
+                    rgb = (rgb / 2 + 0.5).mul_(255).clamp_(0, 255).to(torch.uint8).to(torch.float) / 255. * 2 - 1
+                    yield rgb.cpu()
+            
+            sample_generator = sample()
+
+        fid, (kids, vars) = self.inception_eval.get_fid_kid(sample_generator)
+        kid = np.mean(kids)
+        return fid, kid
+
+     def compute_fid_kid_with_sketch(
+             self, val_loader, sketch_feature_extr, sample_generator=None):
+        if sample_generator is None:
+            def sample():
+                while True:
+                    img, sketch, small_sketch = get_nsamples_with_sketch(val_loader, self.batch_size)
+                    sketch_features = sketch_feature_extr.get_features(small_sketch)
+                    rgb, _, _ = self.create_samples(sketch_features)
                     # convert to uint8 and back to get correct binning
                     rgb = (rgb / 2 + 0.5).mul_(255).clamp_(0, 255).to(torch.uint8).to(torch.float) / 255. * 2 - 1
                     yield rgb.cpu()

@@ -1,0 +1,25 @@
+expname: shapenet_sketch_128
+data:
+  imsize: 128
+  datadir: data/shapenet
+  train_datadir: data/shapenet_sketch/train/
+  val_datadir: data/shapenet_sketch/val/
+  test_datadir: data/shapenet_sketch/test/
+  resnet18_checkpoint: data/checkpoint_0300.pth.tar
+  type: shapenet_sketch
+  white_bkgd: False
+  radius: 3
+  near: 0.01
+  far: 5.
+  fov: 22.0
+  umin: 0.                    # 0 deg, convert to degree via 360. * u
+  umax: 1.                    # 360 deg, convert to degree via 360. * u
+  vmin: 0.5                   # 180 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+  vmax: 0.5                   # 180 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+training:
+  nworkers: 4
+  batch_size: 8
+  reg_type: real
+  lr_g: 0.0005
+  lr_d: 0.0001
+  gan_type: standard
