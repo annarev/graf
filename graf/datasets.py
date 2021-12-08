@@ -100,18 +100,18 @@ class ShapeNetSketchDataset(VisionDataset):
     def __init__(self, data_dirs, transforms=None):
         assert (not isinstance(data_dirs, list),
                 'ShapeNetSketchDataset only supports one directory')
-        root_dir = os.path.dirname(data_dir)
+        root_dir = os.path.dirname(data_dirs)
 
         # initialize base class
         VisionDataset.__init__(self, root=root_dir, transform=transforms)
 
-        self.filenames = sorted(self._get_car_view_files(data_dir))
+        self.filenames = sorted(self._get_car_view_files(data_dirs))
         self.sketch_filenames = []
 
-        sketch_data_dir = os.path.join(data_dir, 'input/sketch')
+        sketch_data_dir = os.path.join(data_dirs, 'input/sketch')
 
         # Add sketch filenames in the same order as image filenames.
-        for view_filename in filenames:
+        for view_filename in self.filenames:
           basename = os.path.basename(view_filename)
           # Remove the '_angle.png' suffix.
           basename = basename[:basename.find('_')]

@@ -4,6 +4,7 @@ import torch.nn as nn
 def GetImageFeatureModel():
     """Creates a model that maps a 32x32 image to a 384 feature vector.
     """
+    padding = 1
     blocks = [
         # 3 x 32 x 32 ==> 6 x 16 x 16
         nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4, stride=2, padding=padding),
@@ -34,7 +35,7 @@ def GetHeadModel():
 
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=3, ndf=64, imsize=64):
+    def __init__(self, nc=3, ndf=64, imsize=64, hflip=False):
         super(Discriminator, self).__init__()
         self.nc = nc
         assert(imsize==32)  # Currently only support 32x32 images
@@ -43,19 +44,19 @@ class Discriminator(nn.Module):
         self.head_net = GetHeadModel()
 
     def forward(self, input, y=None):
-        img, sketch_features = input
+        # The input is of type discriminator_input.DiscriminatorInput.
         # Reshape input image: (BxN_samples)xC -> BxCxHxW
-        img_nchw = img.view(-1, self.imsize, self.imsize, 3).permute(0, 3, 1, 2)
+        img_nchw = input.img.view(-1, self.imsize, self.imsize, 3).permute(0, 3, 1, 2)
         img_features = self.image_feature_net(img_nchw)
         # Concatenate image and sketch features and pass them to the head model.
-        combined_features = torch.cat([image_features, sketch_features], dim=-1)
+        combined_features = torch.cat([img_features, input.sketch_features], dim=-1)
         return self.head_net(combined_features)
 
     def train(self):
-        self.main.train()
-        self.combined_net.train()
+        self.image_feature_net.train()
+        self.head_net.train()
 
     def eval(self):
-        self.main.eval()
-        self.combined_net.eval()
+        self.image_feature_net.eval()
+        self.head_net.eval()
 

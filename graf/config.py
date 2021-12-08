@@ -81,7 +81,7 @@ def get_data(config):
         dset = CUB(**kwargs)
 
     elif dset_type == 'shapenet_sketch':
-      dset = SketchDataset(**kwargs)
+      dset = ShapeNetSketchDataset(**kwargs)
 
     dset.H = dset.W = imsize
 
@@ -173,7 +173,7 @@ def build_models(config, disc=True):
                        'imsize': int(np.sqrt(config['ray_sampler']['N_samples'])),
                        'hflip': config['discriminator']['hflip']}
 
-        if use_sketch:
+        if condition_on_sketch:
             discriminator = discriminator_sketch.Discriminator(**disc_kwargs)
         else:
             discriminator = Discriminator(**disc_kwargs)

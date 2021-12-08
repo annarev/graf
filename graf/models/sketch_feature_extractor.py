@@ -26,8 +26,8 @@ class SketchFeatureExtractor:
 
         status = self.model.load_state_dict(compatible_state_dict, strict=False)
         # Make sure the checkpoint loaded successfully
-        assert not status.unexpected_keys
         assert status.missing_keys == ['fc.weight', 'fc.bias']
+        assert status.unexpected_keys == ['fc.0.weight', 'fc.0.bias', 'fc.2.weight', 'fc.2.bias']
 
         # Remove the last layer.
         self.model.fc = torch.nn.Sequential()
