@@ -24,6 +24,7 @@ from graf.config import get_data, build_models, save_config, update_config, buil
 from graf.utils import count_trainable_parameters, get_nsamples_with_sketch
 from graf.transforms import ImgToPatch
 from graf.models import sketch_feature_extractor
+from graf.models import discriminator_input
 
 from GAN_stability.gan_training import utils
 from GAN_stability.gan_training.train import update_average
@@ -161,7 +162,8 @@ if __name__ == '__main__':
     ptest = torch.stack([generator.sample_pose() for i in range(ntest)])
     sketch_feature_extr = sketch_feature_extractor.SketchFeatureExtractor(
             config['data']['resnet18_checkpoint'], device)
-    x_sketch_features_test = sketch_feature_extr.get_features(x_small_sketch_test)
+    x_sketch_features_test = sketch_feature_extr.get_features(
+            x_small_sketch_test.to(device))
 
     # Test generator
     if config['training']['take_model_average']:
@@ -174,6 +176,7 @@ if __name__ == '__main__':
         generator_test = generator
 
     # Evaluator
+    zdist = None  # Unused since we encode z from a sketch instead
     evaluator = Evaluator(fid_every > 0, generator_test, zdist, ydist,
                           batch_size=batch_size, device=device, inception_nsamples=33)
 
@@ -235,15 +238,17 @@ if __name__ == '__main__':
             t_it = time.time()
             it += 1
             generator.ray_sampler.iterations = it   # for scale annealing
-            sketch_features = sketch_feature_exr.get_features(x_small_sketch.to(device))
+            sketch_features = sketch_feature_extr.get_features(x_small_sketch.to(device))
 
             # Sample patches for real data
             # x_real shape is 8, 3, 128, 128
             rgbs = img_to_patch(x_real.to(device))          # N_samples x C
 
             # Discriminator updates
+            sketch_features_cp = sketch_features.clone().detach()
             dloss, reg = trainer.discriminator_trainstep(
-                    (rgbs, sketch_features), y=y, z=z)
+                    discriminator_input.DiscriminatorInput(rgbs, sketch_features),
+                    y=y, z=sketch_features_cp)
             logger.add('losses', 'discriminator', dloss, it=it)
             logger.add('losses', 'regularizer', reg, it=it)
 
@@ -251,6 +256,7 @@ if __name__ == '__main__':
             if config['nerf']['decrease_noise']:
               generator.decrease_nerf_noise(it)
 
+            sketch_features = sketch_feature_extr.get_features(x_small_sketch.to(device))
             gloss = trainer.generator_trainstep(y=y, z=sketch_features)
             logger.add('losses', 'generator', gloss, it=it)
 

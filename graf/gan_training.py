@@ -151,8 +151,8 @@ class Evaluator(EvaluatorBase):
         kid = np.mean(kids)
         return fid, kid
 
-     def compute_fid_kid_with_sketch(
-             self, val_loader, sketch_feature_extr, sample_generator=None):
+    def compute_fid_kid_with_sketch(
+            self, val_loader, sketch_feature_extr, sample_generator=None):
         if sample_generator is None:
             def sample():
                 while True:

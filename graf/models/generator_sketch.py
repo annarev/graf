@@ -5,8 +5,9 @@ from ..utils import sample_on_sphere, look_at, to_sphere
 from ..transforms import FullRaySampler
 from submodules.nerf_pytorch.run_nerf_mod import render, run_network            # import conditional render
 from functools import partial
+from . import discriminator_input
 
-def GetEncoderModel():
+def GetEncoderModel(z_dim):
     """Build a model that encodes a sketch feature vector to a latent
     vector that encodes car's shape and appearance.
 
@@ -47,7 +48,7 @@ class Generator(object):
         self._parameters = parameters
         self._named_parameters = named_parameters
         self.encode_from_sketch = encode_from_sketch
-        self.encoder_net = GetEncoderModel()
+        self.encoder_net = GetEncoderModel(z_dim)
         
         self.module_dict = {'generator': self.render_kwargs_train['network_fn'],
                 'encoder': self.encoder_net}
@@ -96,7 +97,7 @@ class Generator(object):
         if self.encode_from_sketch:
           # z is a vector of sketch features. We need to encode it to latent vector
           # first.
-          render_kwargs['features'] = self.encoder_net.forward(z_features)
+          render_kwargs['features'] = self.encoder_net.forward(z)
         else:
           render_kwargs['features'] = z
 
@@ -114,7 +115,7 @@ class Generator(object):
 
         # During training, return both the generated image and the input sketch features
         # so that both get passed to the discriminator.
-        return (output_rgb, z)
+        return discriminator_input.DiscriminatorInput(output_rgb, z)
 
     def decrease_nerf_noise(self, it):
         end_it = 5000
